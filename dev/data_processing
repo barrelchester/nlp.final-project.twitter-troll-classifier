@@ -1,0 +1,902 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "58279462",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import sys\n",
+    "\n",
+    "# uncomment any library you need to install and run the cell\n",
+    "\n",
+    "#!{sys.executable} -m pip install numpy\n",
+    "#!{sys.executable} -m pip install matplotlib\n",
+    "#!{sys.executable} -m pip install sklearn\n",
+    "#!{sys.executable} -m pip install emoji\n",
+    "#!{sys.executable} -m pip install spacy\n",
+    "#!{sys.executable} -m pip install gensim"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "cea12f55",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os, re, gzip, json, pickle, shutil, random, joblib, csv, random\n",
+    "\n",
+    "import spacy\n",
+    "\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "from emoji import UNICODE_EMOJI\n",
+    "\n",
+    "%matplotlib inline"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "minor-andorra",
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [],
+   "source": [
+    "#!{sys.executable} -m spacy download en_core_web_sm"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "automated-accent",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#\n",
+    "# Test module based off dev work\n",
+    "#"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "offshore-cache",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sys.path.append('../app')\n",
+    "from config import Config\n",
+    "from preprocessing import Preprocessing"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "fewer-cutting",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "config = Config()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "standard-basket",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "preprocessor = Preprocessing(config)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "sapphire-university",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Extracting raw troll tweets...\n",
+      "Extracted 2116866 troll tweets (badtabs: 0, badlines: 1, skipped nonenglish: 829340)\n",
+      "Extracting raw user tweets...\n",
+      "0\n",
+      "1000000\n",
+      "2000000\n",
+      "3000000\n",
+      "4000000\n",
+      "5000000\n",
+      "0\n",
+      "1000000\n",
+      "2000000\n",
+      "3000000\n",
+      "bad tabs: 217985, bad lines: 223\n",
+      "Extracted 8783464 normal user tweets (badtabs: 217985, badlines: 223)\n"
+     ]
+    }
+   ],
+   "source": [
+    "preprocessor.extract_type_and_text()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "isolated-polls",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Saving 2116866 cleaned troll tweets to ../data/troll_tweets_clean.pkl.gz\n",
+      "0\n",
+      "1000000\n",
+      "2000000\n",
+      "3000000\n",
+      "4000000\n",
+      "5000000\n",
+      "6000000\n",
+      "7000000\n",
+      "8000000\n",
+      "Saving 8783464 cleaned user tweets to ../data/user_tweets_clean.pkl.gz\n"
+     ]
+    }
+   ],
+   "source": [
+    "preprocessor.clean_tweets()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "consecutive-redhead",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with gzip.open(config.troll_tweet_clean_path, 'rb') as fz:\n",
+    "    troll_tweets = pickle.load(fz)\n",
+    "    \n",
+    "with gzip.open(config.user_tweet_clean_path, 'rb') as fz:\n",
+    "    user_tweets = pickle.load(fz)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "antique-antibody",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#truncate and store smaller set\n",
+    "random.shuffle(troll_tweets)\n",
+    "config.troll_tweet_clean_path = '../data/troll_tweets_clean_small.pkl.gz'\n",
+    "with gzip.open(config.troll_tweet_clean_path, 'wb') as oz:\n",
+    "    pickle.dump(troll_tweets[:100000], oz)\n",
+    "        \n",
+    "random.shuffle(user_tweets)\n",
+    "config.user_tweet_clean_path = '../data/user_tweets_clean_small.pkl.gz'\n",
+    "with gzip.open(config.user_tweet_clean_path, 'wb') as oz:\n",
+    "    pickle.dump(user_tweets[:100000], oz)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "normal-hazard",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "preprocessor = Preprocessing(config)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "accompanied-balance",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Storing troll tweets tagged so far: 0 commercial\t<LINK> So, did you crush your workout? <USER> @_kaskp <USER> <USER> <USER> <USER> <USER>\t<LINK> So , did you crush your workout ? <USER> @_kaskp <USER> <USER> <USER> <USER> <USER>\t<LINK> so , do you crush your workout ? <USER> @_kaskp <USER> <USER> <USER> <USER> <USER>\tTAG RB , VBD PRP VB PRP$ NN . TAG NNP TAG TAG TAG TAG TAG\tyour_workout\t\n",
+      "Storing complete 100000 tagged troll tweets\n",
+      "Storing user tweets tagged so far: 0 NormalUser\tCongrats to Toby Warrior Shaye G. of New York, NY, the winner of the Toby Keith Norway Flyaway Sweepstakes! - <LINK>\tCongrats to Toby Warrior Shaye G. of New York , NY , the winner of the Toby Keith Norway Flyaway Sweepstakes ! - <LINK>\tcongrat to Toby Warrior Shaye G. of New York , NY , the winner of the Toby Keith Norway Flyaway sweepstake ! - <LINK>\tNNS IN NNP NNP NNP NNP IN NNP NNP , NNP , DT NN IN DT NNP NNP NNP NNP NNS . : TAG\tToby_Warrior_Shaye_G. New_York the_winner the_Toby_Keith_Norway_Flyaway_Sweepstakes\tToby:ORG New_York:GPE NY:ORG\n",
+      "Storing complete 100000 tagged user tweets\n"
+     ]
+    }
+   ],
+   "source": [
+    "preprocessor.tokenize_tweets()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "surprised-martin",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#\n",
+    "# Dev work\n",
+    "#"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "db5532c9",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "data_path = 'data'\n",
+    "troll_tweet_path = '%s/russian-troll-tweets' % data_path\n",
+    "norm_tweet_path = '%s/twitter_cikm_2010' % data_path\n",
+    "\n",
+    "#extracted text\n",
+    "troll_tweet_texts_path = '%s/troll_tweets.pkl.gz' % data_path\n",
+    "user_tweet_texts_path = '%s/user_tweets.pkl.gz' % data_path\n",
+    "\n",
+    "spacy_nlp = spacy.load('en_core_web_sm')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "id": "e329f93d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def get_tweets(troll_tweet_path, norm_tweet_path):\n",
+    "    troll_tweets = get_troll_tweets(troll_tweet_path)\n",
+    "    \n",
+    "    #training_set_tweets.txt, training_set_users.txt, test_set_tweets.txt, test_set_users.txt\n",
+    "    #15861944\t5766883977\t@techiepalar Please prove to me that you are a real human by following me based on this tweet? I quit TrueTwitValidation & won't use it.\t2009-11-16 09:04:01\n",
+    "    norm_tweets = get_norm_tweets('%s/training_set_tweets.txt' % norm_tweet_path)\n",
+    "    print('%d norm tweets from training file' % len(norm_tweets))\n",
+    "    norm_tweets.extend(get_norm_tweets('%s/test_set_tweets.txt' % norm_tweet_path))\n",
+    "    print('%d total norm tweets' % len(norm_tweets))\n",
+    "    \n",
+    "    return troll_tweets, norm_tweets\n",
+    "\n",
+    "\n",
+    "def get_troll_tweets(troll_tweet_path):\n",
+    "    troll_tweets = []\n",
+    "    badtab=0\n",
+    "    badline=0\n",
+    "    nonenglish=0\n",
+    "    for fn in os.listdir(troll_tweet_path):\n",
+    "        if not fn.endswith('.csv'):\n",
+    "            continue\n",
+    "        with open('%s/%s' % (troll_tweet_path, fn), 'r', encoding='utf-8', newline='\\n') as csvfile:\n",
+    "            reader = csv.reader(csvfile, delimiter=',', quotechar='\"')\n",
+    "            header = next(reader)\n",
+    "            #external_author_id, author, content, region, language, publish_date, arvested_date, following,\n",
+    "            #followers, updates, post_type, account_type, retweet, account_category, new_june_2018, alt_external_id,\n",
+    "            # tweet_id, article_url, tco1_step1, tco2_step1, tco3_step1\n",
+    "            for fields in reader:\n",
+    "                if not len(fields)==21:\n",
+    "                    badtab+=1\n",
+    "                    continue\n",
+    "                    \n",
+    "                if not fields[4].lower().strip()=='english':\n",
+    "                    nonenglish+=1\n",
+    "                    continue\n",
+    "                \n",
+    "                text = fields[2].strip()\n",
+    "                if not text:\n",
+    "                    badline+=1\n",
+    "                    continue\n",
+    "                    \n",
+    "                troll_type = fields[13].strip()\n",
+    "                troll_tweets.append('%s\\t%s' % (troll_type, text))\n",
+    "                \n",
+    "        print(fn, len(troll_tweets), badtab, badline, nonenglish)\n",
+    "    return troll_tweets\n",
+    "\n",
+    "            \n",
+    "def get_norm_tweets(path):\n",
+    "    norm_tweets = []\n",
+    "    badtab=0\n",
+    "    badline=0\n",
+    "    \n",
+    "    with open(path, 'r', encoding='utf-8') as f:\n",
+    "        for i,line in enumerate(f):\n",
+    "            if i%250000==0:\n",
+    "                print(i)\n",
+    "            if not line.count('\\t')==3:\n",
+    "                badtab+=1\n",
+    "                continue\n",
+    "            line = line.replace('\\n','').split('\\t')[2].strip()\n",
+    "            if not line:\n",
+    "                badline+=1\n",
+    "                continue\n",
+    "            norm_tweets.append('NormalUser\\t%s' % line)\n",
+    "            \n",
+    "    print('bad tabs: %d, bad lines: %d' % (badtab, badline))\n",
+    "    \n",
+    "    return norm_tweets"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 36,
+   "id": "86b95301",
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "IRAhandle_tweets_1.csv 243891 0 0 53639\n",
+      "IRAhandle_tweets_10.csv 501002 0 0 136284\n",
+      "IRAhandle_tweets_11.csv 751623 0 0 192906\n",
+      "IRAhandle_tweets_12.csv 990973 0 0 256290\n",
+      "IRAhandle_tweets_13.csv 1011867 0 0 265581\n",
+      "IRAhandle_tweets_2.csv 1262387 0 0 319645\n",
+      "IRAhandle_tweets_3.csv 1505289 0 0 348110\n",
+      "IRAhandle_tweets_4.csv 1752083 0 0 403696\n",
+      "IRAhandle_tweets_5.csv 1969306 0 0 460357\n",
+      "IRAhandle_tweets_6.csv 2227356 0 1 507917\n",
+      "IRAhandle_tweets_7.csv 2469708 0 1 602085\n",
+      "IRAhandle_tweets_8.csv 2712666 0 1 721318\n",
+      "IRAhandle_tweets_9.csv 2946206 0 1 829340\n",
+      "0\n",
+      "250000\n",
+      "500000\n",
+      "750000\n",
+      "1000000\n",
+      "1250000\n",
+      "1500000\n",
+      "1750000\n",
+      "2000000\n",
+      "2250000\n",
+      "2500000\n",
+      "2750000\n",
+      "3000000\n",
+      "3250000\n",
+      "3500000\n",
+      "3750000\n",
+      "bad tabs: 170147, bad lines: 176\n",
+      "3675302 norm tweets from training file\n",
+      "0\n",
+      "250000\n",
+      "500000\n",
+      "750000\n",
+      "1000000\n",
+      "1250000\n",
+      "1500000\n",
+      "1750000\n",
+      "2000000\n",
+      "2250000\n",
+      "2500000\n",
+      "2750000\n",
+      "3000000\n",
+      "3250000\n",
+      "3500000\n",
+      "3750000\n",
+      "4000000\n",
+      "4250000\n",
+      "4500000\n",
+      "4750000\n",
+      "5000000\n",
+      "bad tabs: 47838, bad lines: 47\n",
+      "8783464 total norm tweets\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "(2946206, 8783464)"
+      ]
+     },
+     "execution_count": 36,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "if not os.path.exists(troll_tweet_texts_path):\n",
+    "    troll_tweets, norm_tweets = get_tweets(troll_tweet_path, norm_tweet_path)\n",
+    "    \n",
+    "    with gzip.open('%s/troll_tweets.pkl.gz' % data_path, 'wb') as oz:\n",
+    "        pickle.dump(troll_tweets, oz)\n",
+    "        \n",
+    "    with gzip.open('%s/normal_tweets.pkl.gz' % data_path, 'wb') as oz:\n",
+    "        pickle.dump(norm_tweets, oz)\n",
+    "else:\n",
+    "    with gzip.open('%s/troll_tweets.pkl.gz' % data_path, 'rb') as fz:\n",
+    "        troll_tweets = pickle.load(fz)\n",
+    "        \n",
+    "    with gzip.open('%s/normal_tweets.pkl.gz' % data_path, 'rb') as fz:\n",
+    "        norm_tweets = pickle.load(fz)\n",
+    "        \n",
+    "len(troll_tweets), len(norm_tweets)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 41,
+   "id": "9a888c59",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# preproc cleaning \n",
+    "# - replace links with <LINK>, replace usertags with <USER>\n",
+    "# - normalize spaces, quotes, double quotes, etc\n",
+    "def clean_tweets(troll_tweets, norm_tweets):\n",
+    "    clean_troll_tweets = []\n",
+    "    for i,troll_tweet in enumerate(troll_tweets):\n",
+    "        clean_troll_tweets.append(clean_tweet(troll_tweet))\n",
+    "        \n",
+    "    clean_norm_tweets = []\n",
+    "    for i,norm_tweet in enumerate(norm_tweets):\n",
+    "        clean_norm_tweets.append(clean_tweet(norm_tweet))\n",
+    "    \n",
+    "    return clean_troll_tweets, clean_norm_tweets\n",
+    "\n",
+    "\n",
+    "def clean_tweet(tweet, repl={'‘':\"'\", '’':\"'\", '“':'\"', '”':'\"'}):\n",
+    "    #normalize spaces, quotes, double quotes, etc ‘’“”\n",
+    "    for f,r in repl.items():\n",
+    "        tweet = tweet.replace(f,r)\n",
+    "        \n",
+    "    #norm spaces\n",
+    "    tweet = re.sub('  +', ' ', tweet)\n",
+    "        \n",
+    "    #replace links with <LINK>, replace usertags with <USER>, leave hashtags\n",
+    "    tweet = re.sub('https?:[^ ]+', '<LINK>', tweet)\n",
+    "    \n",
+    "    tweet = re.sub('@[a-zA-Z][^ ]+', '<USER>', tweet)\n",
+    "    \n",
+    "    clean = []\n",
+    "    for char in tweet:\n",
+    "        if char in UNICODE_EMOJI['en']:\n",
+    "            clean.append('<EMOJI>')\n",
+    "        else:\n",
+    "            clean.append(char)\n",
+    "            \n",
+    "    return ''.join(clean)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 42,
+   "id": "bda6373d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "clean_troll_tweets, clean_norm_tweets = clean_tweets(troll_tweets, norm_tweets)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "id": "02e3545a",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with gzip.open('%s/troll_tweets_clean.pkl.gz' % data_path, 'wb') as oz:\n",
+    "    pickle.dump(clean_troll_tweets, oz)\n",
+    "\n",
+    "with gzip.open('%s/normal_tweets_clean.pkl.gz' % data_path, 'wb') as oz:\n",
+    "    pickle.dump(clean_norm_tweets, oz)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 40,
+   "id": "20ea1aa3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "NormalUser\t<USER> coo. thanks. just dropped you a line.\n",
+      "NormalUser\t<USER> shit it ain't lettin me DM you back, what's your email?\n",
+      "NormalUser\t<USER> hey cody, quick question...can you dm me?\n",
+      "NormalUser\t<USER> dang. you need anything? I got some left over meds!\n",
+      "NormalUser\tmaybe i'm late in the game on this one, but this lowender vst is making my apt rumble!\n",
+      "NormalUser\ti really hope A.I. makes the most of this second chance in philly. i'm glad he's goin home.\n",
+      "NormalUser\t<USER> danny boy! wanna check out d-nice at the afex 1 year tonight? we could pre-game at mine and walk over.\n",
+      "NormalUser\t...and if you have ppl that you care about, make sure to let them know. life is too short to lose friends over bullshit. peace and love.\n",
+      "NormalUser\t...that shit weighs heavy on me. take responsibility for your life. I don't blame anyone for where I am in this world...\n",
+      "NormalUser\t...including his last failed relationship. and while I know that none of it is grounded in reality, and I actually am worried about him...\n",
+      "NormalUser\tso...I got a string of texts last night from someone I haven't heard from in a long time blaming me for everything wrong with his life...\n",
+      "NormalUser\tthank you echo park. you've changed A LOT, but as long as I'm getting paid to make you move, I'm still with it!\n",
+      "NormalUser\tfat Albert Einstein goin in right now over here!!!\n",
+      "NormalUser\tSATURDAY NIGHT AT THE TAVERN: <LINK>\n",
+      "NormalUser\tFRIDAY NIGHT AT THE GRIFFIN: <LINK>\n",
+      "NormalUser\ttonight: we're up and runnin by 7:30, you're on faderz by 10 for $10. can't beat that wit a bat. <LINK>\n",
+      "NormalUser\t<USER> oh no it got you?! sorry to hear that. you'll be back in no time.\n",
+      "NormalUser\t<USER> you talkin to me? you still ain't following me!\n",
+      "NormalUser\tSave the date for dec 29th <USER> (full band live set) pase rock skeet skeet hosted by Daymeon! (via <USER> MASTER BLAZTER.\n",
+      "NormalUser\tgo go go and rsvp to our christmas party before we fill up!! details are a click away! - <LINK> (via <USER> --YAY!\n",
+      "NormalUser\tha ha! hornets just took an intentional foul so they could try to keep the staples crowd from getting tacos! didn't work anyhow.\n",
+      "NormalUser\t<USER> you're my favorite! thanks for cracking me up.\n",
+      "NormalUser\tlakes up 20 at the half. can't wait til we can get some competition.\n",
+      "NormalUser\tweek's gigs: tomorrow night at BARRAGAN'S (echo park), friday night at THE GRIFFIN (atwater), and saturday night at HYPERION TAVERN (s.lake)\n",
+      "NormalUser\tI LOVE YOU ALL!!! ALL OVER THE WORLD!!!\n",
+      "NormalUser\ton a good note, those star trek lookin cadet jackets were BAD-ASS!\n",
+      "NormalUser\tnow I'm gonna watch my followers ticker roll backwards.\n",
+      "NormalUser\tidk man. my heart is heavy right now. I think a lot of hope just went out the window.\n",
+      "NormalUser\talright, let's hear it, obama.\n",
+      "NormalUser\tthere was just a shooting up the street. another one. way to go assholes.\n",
+      "NormalUser\tafghanistan not in trending topics, but tiger woods still is. way to go.\n",
+      "NormalUser\tthis afghanistan situation is not good. come on, no more blood. streets are #red already.\n",
+      "NormalUser\ti need to have a psyreiously outer worldly experience soon.\n",
+      "NormalUser\t<USER> hey man, major heavy is major heavy. great job.\n",
+      "NormalUser\tAFP: A total of 122 people died in Iraq last month, the LOWEST toll since the U.S.-led invasion in 2003. (via <USER>\n",
+      "NormalUser\tDock Ellis's animated retelling of the no hitter HE PITCHED WHILE TRIPPING ON ACID: <LINK> (via <USER> <-SO FUNNY.\n",
+      "NormalUser\t<USER> good rhyme.\n",
+      "NormalUser\t<USER> what up sexi exi?\n",
+      "NormalUser\tlistening to my Dad's music he was a slept on great!!! (via <USER> <-YOU CAN SHINE FOR BOTH OF YOU.\n",
+      "NormalUser\ttons of new Denim!\n",
+      "NormalUser\tBrainwreck release soon! Get down to Hotrod!\n",
+      "NormalUser\tCome down\n",
+      "NormalUser\tNew classic selvedge denim and cotton slim pants! <LINK>\n",
+      "NormalUser\tNew ripppers! <LINK>\n",
+      "NormalUser\tThe staff of hotrod is officially out of the building but will be back with an organic latte!\n",
+      "NormalUser\t<LINK>\n",
+      "NormalUser\ttons of new winter wear at hotrod! Get down here now!\n",
+      "NormalUser\training like crazy at hotrod!\n",
+      "NormalUser\t<USER> shoe release soon!\n",
+      "NormalUser\tCLICK ON THIS!! <LINK>\n",
+      "NormalUser\tNIKE SB DUNK HIGH BRAIN WRECKS!!! CALL DOWN TO HOTROD RIGHT NOW TO LEARN MORE!!!!! 310.446.5527\n",
+      "NormalUser\tI uploaded a YouTube video -- Mishka Holiday Collection and Vans Classics <USER> call 310.446.5527 now <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- Nike Sb 2009 Releases @ Hotrod Call 310.446.5527 now to get a pair!!!!!W... <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- New Hotrod Horror Shirt Release! Teal and Bright Green!<USER> Call 310.... <LINK>\n",
+      "NormalUser\tROLL DOWN TO HOT ROD TODAY TO PICK UP THE NIKE SB PREMIUM BLAZER ELITE \"SUB POP\", DEADSTOCK BLACK RAYGUNS, OR DEADSTOCK (RED) LOBSTERS!!!\n",
+      "NormalUser\tI uploaded a YouTube video -- HR SECRET STASH RELEASE <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- NEW VANS VAULT ARRIVALS AT HOT ROD ALONG WITH PLENTY OF OTHER SICK GEAR!... <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- NIKE SB SEPTEMBER 09 QUICKSTRIKE RELEASE <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- MVI 0834 <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- HOT ROD 20% OFF \"BACK TO LABOR DAY SCHOOL\" SPECIAL <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- HOT ROD NIKE SB SEPTEMBER 09 DUNK AND BLAZERS RELEASE <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- HOT ROD CONVERSE ARRIVAL <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- NIKE SB TOXIC AVENGER HOTROD LOS ANGELES WWW.HRLIFE.COM 310.446.5527 <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- Nike Sb Dunk High Pac Man Quickstrike Hotrod www.hrlife.com HR Los Angeles <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- New Hotrod and Cease & Desist Shirts<USER> All Hand Made in Los Angeles <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- Hotrod Goes To Starbucks Part 3!!!! <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- Nike Sb August Shipment Hotrod Hr Los Angeles Craze <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- NIKE SB AUGUST RELEASES HOTROD HR CALL 310.446.5527 <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- CONVERSE CONS CTS HIGH QUICKSTRIKE DIGITAL TIE DYE HOTRO RELEASE CALL 31... <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- HOTROD INTERVIEWS NOAH ABRAMS BUT ENDS UP A BAD ONE! <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- Hotrod Goes to Starbucks Part 2 <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- HR HOTROD CRAZE PLUS INTRODUCING ARTIST BERTO <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- Hotrod Store Tour July 24 2009 HR Los Angeles <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- Nike Sb Blazer Premium Swoosh Life Release at Hotrod Call 310.446.5527 t... <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- Nike Sb Dunk Low Pro Miss Pacman Hotrod Release July 21 2009 WWW.HRLIFE.COM <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- Vans Vault Fall 09 Hotrod Shipment Showcase and Review <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- HOTROD TOP PICK OF THE WEEK #1 WITH KYLE JORDAN <LINK>\n",
+      "NormalUser\tI uploaded a YouTube video -- Hotrod goes to starbucks for a quick refill! <LINK>\n",
+      "NormalUser\tRT <USER> <USER> or the free Rumble at Mississippi Studios tonight. <LINK> sounds like a great show too!\n",
+      "NormalUser\tFor all our pdx followers we recmmnd <USER> appearing at the Doug fir <LINK> tonight. Doors at 8. #indie #music\n",
+      "NormalUser\tFor all our pdx followers we recmmnd <USER> appearing at the Doug fir <LINK> tonight. Doors at 8.\n",
+      "NormalUser\t<USER> Oh - and I'd love to have one of those shirts too, but I don't see our logo on it! Maybe next time...\n",
+      "NormalUser\tYes! <USER> has been accepted to <USER> - A great program for small startups built on MS technologies. We use Silverlight 2 & 3!\n",
+      "NormalUser\tI & another company founder are putting the final touches on the admin interface. How exciting! This is the portion librarians will utilize\n",
+      "NormalUser\tlooking for interstng educatrs & librarians 2 follow, and I strolled acrss <USER> - We appear to be of lke minds based on twttr bio.\n",
+      "NormalUser\tRT <USER> Students Build Hydrogen Vehicle That Gets 1,336 MPG : Gas 2.0 <LINK>\n",
+      "NormalUser\t<LINK> A review of <USER> \"Are Sound\" album at NW Music Blog. Can't wait for my LP. :)\n",
+      "NormalUser\t<USER> let me research that just a bit, and I will get back to you soon!\n",
+      "NormalUser\t<USER> D'accord, avec plaisir.\n",
+      "NormalUser\t#film used in #highered: Killing us Softly 3 (youtube segment) <LINK> <USER> U of Houston CL, Florida State U., <USER>\n",
+      "NormalUser\tDo stdnts ever hve prblms watching the film assigned for class? Too few screenings? Missing DVD/VHS? Alrdy checked out? <LINK>\n",
+      "NormalUser\tBastille day is coming..... <LINK> I think I will get the download and the LP.\n",
+      "NormalUser\t#film used in #highered - The Tragedy of MacBeth (Polanski '71) <LINK> <USER> Brit Lit clss by Prof. Jones <LINK>\n",
+      "NormalUser\tWelcome to Twitter, Mike - it will only improve from your contributions to the twittersphere. <USER> <USER>\n",
+      "NormalUser\tFriend from my Navy days, <USER> we used to fix TACAN <LINK> together at Pt. Mugu Naval Air Station <LINK>\n",
+      "NormalUser\tNew website going up soon. Say goodbye to the 'Alpha' stage company site <LINK> Our new site will be much more dynamic.\n",
+      "NormalUser\t<USER> I think it speaks to their target market, for certain. An interesting play for those excluded from acceptance at n-f-p institutions\n",
+      "NormalUser\tWe are following all of you, and proud of it! RT <USER> <USER> <USER> Please check spelling for <USER>\n",
+      "NormalUser\tThx for the mention! RT <USER> #ff <USER> <USER> <USER> <USER> <USER> <USER> <USER> <USER> <USER> @38wes\n",
+      "NormalUser\t<USER> Here's 2 wishing this had been streamd RT <USER> #edmedia Morrison's pres on faculty resistance to tech generated good disc.\n",
+      "NormalUser\t<USER> Argh! I almost turned with the school of fish!\n"
+     ]
+    }
+   ],
+   "source": [
+    "for i,ctt in enumerate(clean_norm_tweets):\n",
+    "    if i>100:\n",
+    "        break\n",
+    "    print(ctt)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "4c77da69",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "special_tags = set(['<USER>', '<LINK>', '<EMOJI>'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "49e8913e",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def tokenize_tweets(troll_tweets, user_tweets,\n",
+    "                    get_lemmas=False, get_pos=False, get_phrases=False, get_ents=False):\n",
+    "    tagged_troll_tweets = []\n",
+    "    for i,troll_tweet in enumerate(troll_tweets):\n",
+    "        tweet_type, tweet_text = troll_tweet.split('\\t')\n",
+    "        toks, lemmas, pos, phrases, ents = tokenize_text(tweet_text, get_lemmas, get_pos, get_phrases, get_ents)\n",
+    "        tagged_troll_tweets.append('%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s' % (tweet_type, tweet_text, toks, lemmas, pos, phrases, ents))\n",
+    "        \n",
+    "        if i%100000==0:\n",
+    "            print(i, tagged_troll_tweets[-1])\n",
+    "            with gzip.open('%s/troll_tweets_tagged.pkl.gz' % data_path, 'wb') as oz:\n",
+    "                pickle.dump(tagged_troll_tweets, oz)\n",
+    "        \n",
+    "    tagged_user_tweets = []\n",
+    "    for i,user_tweet in enumerate(user_tweets):\n",
+    "        tweet_type, tweet_text = user_tweet.split('\\t')\n",
+    "        toks, lemmas, pos, phrases, ents = tokenize_text(tweet_text, get_lemmas, get_pos, get_phrases, get_ents)\n",
+    "        tagged_user_tweets.append('%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s' % (tweet_type, tweet_text, toks, lemmas, pos, phrases, ents))\n",
+    "        \n",
+    "        if i%100000==0:\n",
+    "            print(i, tagged_user_tweets[-1])\n",
+    "            with gzip.open('%s/user_tweets_tagged.pkl.gz' % data_path, 'wb') as oz:\n",
+    "                pickle.dump(tagged_user_tweets, oz)\n",
+    "    \n",
+    "    return tagged_troll_tweets, tagged_user_tweets\n",
+    "\n",
+    "\n",
+    "def tokenize_text(text, get_lemmas=False, get_pos=False, get_phrases=False, get_ents=False):\n",
+    "    toks = []\n",
+    "    lemmas = []\n",
+    "    pos = []\n",
+    "    phrases = []\n",
+    "    ents = []\n",
+    "    \n",
+    "    doc = spacy_nlp(text)\n",
+    "    if get_phrases:\n",
+    "        for chunk in doc.noun_chunks:\n",
+    "            if not ' ' in chunk.text:\n",
+    "                continue\n",
+    "            phrases.append(chunk.text.replace(' ', '_'))\n",
+    "        \n",
+    "    ent_type=''\n",
+    "    ent=[]\n",
+    "    for tok in doc:\n",
+    "        toks.append(tok.text)\n",
+    "        \n",
+    "        if tok.text in special_tags:\n",
+    "            if get_lemmas:\n",
+    "                lemmas.append(tok.text)\n",
+    "            if get_pos:\n",
+    "                pos.append('TAG')\n",
+    "            continue\n",
+    "        \n",
+    "        if get_ents:\n",
+    "            if tok.ent_iob == 3: #start\n",
+    "                ent_type = tok.ent_type_\n",
+    "                ent.append(tok.text)\n",
+    "            elif tok.ent_iob == 1: #continue\n",
+    "                ent.append(tok.text)\n",
+    "            else:\n",
+    "                if ent:\n",
+    "                    ents.append('%s:%s' % ('_'.join(ent), ent_type))\n",
+    "                    ent=[]\n",
+    "                    ent_type=''\n",
+    "                    \n",
+    "        if get_lemmas:\n",
+    "            lemmas.append(tok.lemma_)\n",
+    "            \n",
+    "        if get_pos:\n",
+    "            pos.append(tok.tag_)\n",
+    "        \n",
+    "    toks = ' '.join(toks)\n",
+    "    lemmas = ' '.join(lemmas)\n",
+    "    pos = ' '.join(pos)\n",
+    "    phrases = ' '.join(phrases)\n",
+    "    ents = ' '.join(ents)\n",
+    "    \n",
+    "    return toks, lemmas, pos, phrases, ents"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "9eb2778b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with gzip.open('%s/troll_tweets_clean.pkl.gz' % data_path, 'rb') as fz:\n",
+    "    clean_troll_tweets = pickle.load(fz)\n",
+    "\n",
+    "with gzip.open('%s/user_tweets_clean.pkl.gz' % data_path, 'rb') as fz:\n",
+    "    clean_user_tweets = pickle.load(fz)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "47b61396",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "spacy_nlp.tokenizer.add_special_case(f\"<USER>\", [{spacy.attrs.ORTH: f\"<USER>\"}])\n",
+    "spacy_nlp.tokenizer.add_special_case(f\"<LINK>\", [{spacy.attrs.ORTH: f\"<LINK>\"}])\n",
+    "spacy_nlp.tokenizer.add_special_case(f\"<EMOJI>\", [{spacy.attrs.ORTH: f\"<EMOJI>\"}])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c15934a5",
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0 RightTroll\t\"We have a sitting Democrat US Senator on trial for corruption and you've barely heard a peep from the mainstream media.\" ~ <USER> <LINK>\t\" We have a sitting Democrat US Senator on trial for corruption and you 've barely heard a peep from the mainstream media . \" ~ <USER> <LINK>\t\" we have a sit Democrat US Senator on trial for corruption and you 've barely hear a peep from the mainstream medium . \" ~ <USER> <LINK>\t`` PRP VBP DT VBG NNP NNP NNP IN NN IN NN CC PRP VBP RB VBN DT NN IN DT NN NNS . '' NFP TAG TAG\ta_sitting_Democrat_US_Senator a_peep the_mainstream_media\tDemocrat_US:GPE\n",
+      "100000 RightTroll\t1%ers defrauded People of their President in Primary. If wise they'll give We The People something if a #12thAmendmentElection doesn't occur <LINK>\t1%ers defrauded People of their President in Primary . If wise they 'll give We The People something if a # 12thAmendmentElection does n't occur <LINK>\t1%er defraud People of their President in Primary . if wise they 'll give we the People something if a # 12thamendmentelection do not occur <LINK>\tNNS VBD NNS IN PRP$ NNP IN NNP . IN JJ PRP MD VB PRP DT NNS NN IN DT NNS CD VBZ RB VB TAG\ttheir_President The_People\t1%ers:CARDINAL Primary:GPE 12thAmendmentElection:MONEY\n",
+      "200000 RightTroll\tRT TrumpTrain45Pac: 🇺🇸<EMOJI>Calling all POTUS realDonaldTrump Supporters<EMOJI>️ We're Not Gonna Take It Anymore! <EMOJI> #Americ… <LINK>\tRT TrumpTrain45Pac : 🇺 🇸 <EMOJI> Calling all POTUS realDonaldTrump Supporters < EMOJI>️ We 're Not Gon na Take It Anymore ! <EMOJI> # Americ … <LINK>\tRT trumptrain45pac : 🇺 🇸 <EMOJI> call all POTUS realDonaldTrump supporter < emoji>️ we be not going to take it anymore ! <EMOJI> # Americ … <LINK>\tNNP CD : CD NNP TAG VBG DT NNP . NNS XX NN PRP VBP RB VBG TO VB PRP RB . TAG $ NNP NFP TAG\tRT_TrumpTrain45Pac:_🇺🇸 all_POTUS <EMOJI>_#Americ\tTrumpTrain45Pac:PRODUCT 🇸:CARDINAL\n",
+      "300000 LeftTroll\tDid Sean Spicer actually tweet a Bitcoin transaction? <LINK> #p2 #ctl <LINK>\tDid Sean Spicer actually tweet a Bitcoin transaction ? <LINK> # p2 # ctl <LINK>\tdo Sean Spicer actually tweet a Bitcoin transaction ? <LINK> # p2 # ctl <LINK>\tVBD NNP NNP RB VBP DT NNP NN . TAG $ NNS $ NN TAG\tSean_Spicer a_Bitcoin_transaction <LINK>_#p2_#ctl\tSean_Spicer:PERSON Bitcoin:PERSON #_p2_#:MONEY\n",
+      "400000 NewsFeed\tRio water as safe as Vancouver, says Canada doctor #sports\tRio water as safe as Vancouver , says Canada doctor # sports\tRio water as safe as Vancouver , say Canada doctor # sport\tNNP NN RB JJ IN NNP , VBZ NNP NN $ NNS\tRio_water Canada_doctor\tVancouver:GPE Canada:GPE #:CARDINAL\n",
+      "500000 NewsFeed\tMotive behind suspicious death in Renton remains unclear #local\tMotive behind suspicious death in Renton remains unclear # local\tmotive behind suspicious death in Renton remain unclear # local\tVB IN JJ NN IN NNP VBZ JJ $ JJ\tsuspicious_death\tRenton:GPE #:CARDINAL\n",
+      "600000 LeftTroll\tNew Study on Drug Use Confirms What Black People Have Been Saying This Whole Time <LINK> <LINK>\tNew Study on Drug Use Confirms What Black People Have Been Saying This Whole Time <LINK> <LINK>\tNew Study on Drug Use confirm what black People have be say this whole time <LINK> <LINK>\tNNP NNP IN NNP NNP VBZ WP JJ NNS VBP VBN VBG DT JJ NN TAG TAG\tNew_Study Drug_Use Black_People\t\n",
+      "700000 NewsFeed\t#sports Seahawks eliminate 'Super' distractions\t# sports Seahawks eliminate ' Super ' distractions\t# sport Seahawks eliminate ' Super ' distraction\t$ NNS NNP VBP `` NNP POS NNS\tsports_Seahawks 'Super'_distractions\tSeahawks:PERSON Super:ORG\n",
+      "800000 HashtagGamer\tI wish that I could wake up with amnesia and forget about the stupid little things.\tI wish that I could wake up with amnesia and forget about the stupid little things .\tI wish that I could wake up with amnesia and forget about the stupid little thing .\tPRP VBP IN PRP MD VB RP IN NNP CC VB IN DT JJ JJ NNS .\tthe_stupid_little_things\t\n",
+      "900000 NonEnglish\tВ Канзасе директор школы ушла в отставку после расследования в ученической газете Дети нашли у главы школы подозрительные учёные степени <LINK>\tВ Канзасе директор школы ушла в отставку после расследования в ученической газете Дети нашли у главы школы подозрительные учёные степени <LINK>\tВ Канзасе директор школы ушла в отставку после расследования в ученической газете Дети нашли у главы школы подозрительные учёные степени <LINK>\tNNP NNP NNP NNP NN NNP JJR VBP NN NNP NNS NNP NNP NNPS NNP NNP NNP NNP NNP NN TAG\tВ_Канзасе_директор_школы_ушла после_расследования ученической_газете_Дети\tВ_Канзасе:PERSON Дети:GPE\n",
+      "1000000 RightTroll\tFC Barcelonas youth academy! La Masia doin work! Double tap for these little guys! <LINK>\tFC Barcelonas youth academy ! La Masia doin work ! Double tap for these little guys ! <LINK>\tFC Barcelonas youth academy ! La Masia doin work ! double tap for these little guy ! <LINK>\tNNP NNP NN NN . NNP NNP VB NN . JJ NN IN DT JJ NNS . TAG\tFC_Barcelonas_youth_academy La_Masia Double_tap these_little_guys\tLa_Masia:ORG\n"
+     ]
+    }
+   ],
+   "source": [
+    "get_lemmas=True\n",
+    "get_pos=True\n",
+    "get_phrases=True\n",
+    "get_ents=True\n",
+    "\n",
+    "tagged_troll_tweets, tagged_user_tweets = tokenize_tweets(clean_troll_tweets, clean_user_tweets,\n",
+    "                                                          get_lemmas, get_pos, get_phrases, get_ents)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "428afcf4",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with gzip.open('%s/troll_tweets_tagged.pkl.gz' % data_path, 'wb') as oz:\n",
+    "    pickle.dump(tagged_troll_tweets, oz)\n",
+    "    \n",
+    "with gzip.open('%s/user_tweets_tagged.pkl.gz' % data_path, 'wb') as oz:\n",
+    "    pickle.dump(tagged_user_tweets, oz)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "353b1c29",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#\n",
+    "# Data Analysis\n",
+    "#"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "2ca2593c",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# compare histograms\n",
+    "# - lens of troll vs normal tweets\n",
+    "# - user mentions, link mentions\n",
+    "# - given a dict, percent of words in tweet not in the dict"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "ongoing-fourth",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "83839"
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "spacy_nlp = spacy.load('en_core_web_sm')\n",
+    "\n",
+    "vocab = list(spacy_nlp.vocab.strings)\n",
+    "len(vocab)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "7e9080e4",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# do ngram frequency analysis"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "275306ac",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "14d9722c",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "61189be7",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#emojis used:\n",
+    "#❤️💙💜♥️⌚️🎉💥🔥♀️💯🚨⚡️🌲🙀👹🍄🌸🌻🌺🌼🌹❄️⛄️🐝🐟🐀🦌🦅🐘🦄🗽\n",
+    "#🙏👊👉👍👌☝️✌👋👇👏💁🏼🤷🏼🙋🚶\n",
+    "#😎😱😨😞☹😳😭😮😡😢😊😂🤣😅🤔🙄😬😁😖🤕😤😜\n",
+    "#👀⇩🎥🎣☠️💀🎶🚂👂3️⃣⏪✅➡️🔁⬇️\n",
+    "#✔️✖️⭕🇺🇸⚔️💣📜🎯✨☕️⚓️�⏱📖📚✪✦🎙"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.1"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
