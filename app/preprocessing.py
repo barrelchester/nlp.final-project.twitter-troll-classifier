@@ -3,6 +3,8 @@ import os, re, gzip, pickle, csv
 #these have to be installed first (see preproc notebook)
 import spacy
 from emoji import UNICODE_EMOJI
+from nltk.corpus import words
+from nltk.corpus import wordnet 
 
 
 
@@ -18,7 +20,10 @@ class Preprocessing():
         self.config = config
         self.replacements = {'‘':"'", '’':"'", '“':'"', '”':'"'}
         self.special_tags = set(['<EMOJI>', '<LINK>', '<USER>'])
+        self.punct = set(["'", '"', '.', ',', '~', '!', '@', '#', '$', '%', '^', '&', '*', '|',
+             '(', ')', '-', '_', '+', '=', '{','}','[',']',';', ':', '<', '>', '?', '/'])
         self.spacy_nlp = spacy.load('en_core_web_sm')
+        self.vocab = set(words.words()) | set(wordnet.words())
         
         #tell spacy not to tokenize these tags
         for tag in self.special_tags:
@@ -312,4 +317,88 @@ class Preprocessing():
         ents = ' '.join(ents)
 
         return toks, lemmas, pos, phrases, ents
+    
+    
+    def def get_features(self, tweets, vocab, punct):
+        feats = []
+        for i,tweet in enumerate(tweets):
+            if i and i%100000==0:
+                print(i, feats[-1])
+
+            tp,txt,toks,lems,pos,phrs,ents = tweet.replace('\xa0','').split('\t')
+
+            if tp=='NonEnglish':
+                continue
+
+            num_toks = toks.count(' ')+1
+            emoji_ratio, link_ratio, user_ratio = 0,0,0
+            emoji_ratio = txt.count('<EMOJI>')/num_toks
+            link_ratio = txt.count('<LINK>')/num_toks
+            user_ratio = txt.count('<USER>')/num_toks
+
+            toks = toks.replace('< ', '<').replace(' >', '>').replace('# ','#')
+
+            clean_ents = set()
+            ent_types = set()
+            ent_toks = set()
+            for ent in ents.split(' '):
+                if ent=='#:CARDINAL':
+                    continue
+                items = ent.split(':')
+                for t in items[0].split('_'):
+                    ent_toks.add(t)
+                typ = items[-1]
+                if not typ:
+                    continue
+                if typ[0]=='#':
+                    continue
+                if '\xa0' in typ:
+                    continue
+                clean_ents.add(ent)
+                ent_types.add(typ)
+            clean_ents = list(clean_ents)
+            ent_types = list(ent_types)
+            ent_toks = list(ent_toks)
+
+            num_ents = ents.count(' ')+1
+
+            lems = lems.lower()
+            lems = re.sub('<[^>]+>', '', lems)
+            lems = lems.replace('# ','#')
+
+            voc=[]
+            novoc=[]
+            for lem in lems.split(' '):
+                if not lem or lem in self.punct or lem[0]=='#' or lem in ent_toks:
+                    continue
+                if lem in self.vocab:
+                    voc.append(lem)
+                else:
+                    novoc.append(lem)
+
+            ratio = 0
+            if voc or novoc:
+                ratio = len(novoc)/(len(voc)+len(novoc))
+                #print('%s\nvoc: %s\nno voc: %s\nratio: %.6f\n' % (txt, voc, novoc, ratio))
+
+            tags = re.findall('#[^ ]+', txt)
+
+            feats.append({
+                'type':tp,
+                'text':txt,
+                'tokens':toks,
+                'lemmas':lems,
+                'pos':pos,
+                'phrases':phrs,
+                'entities':clean_ents,
+                'ent_types':ent_types,
+                'hashtags':tags,
+                'oov_words':' '.join(novoc),
+                'emoji_ratio':emoji_ratio, 
+                'link_ratio':link_ratio, 
+                'user_ratio':user_ratio,
+                'oov_ratio':ratio
+            })
+
+        return feats
     
