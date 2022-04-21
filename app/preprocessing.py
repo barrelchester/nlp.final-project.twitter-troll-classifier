@@ -319,7 +319,7 @@ class Preprocessing():
         return toks, lemmas, pos, phrases, ents
     
     
-    def def get_features(self, tweets, vocab, punct):
+    def get_features(self, tweets, vocab, punct):
         feats = []
         for i,tweet in enumerate(tweets):
             if i and i%100000==0:
