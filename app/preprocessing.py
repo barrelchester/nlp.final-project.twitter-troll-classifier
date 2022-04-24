@@ -61,6 +61,14 @@ class Preprocessing():
         else:
             print('Clean tweets already tagged.')
             
+        #calculate features and create final tweet feature records
+        if not os.path.exists(self.config.troll_feature_path):
+            print('%s not found, creating feature files' % self.config.troll_feature_path)
+            self.get_features()
+            print('Done tagging and storing tweets.')
+        else:
+            print('Tweet features already created.')
+            
         print('All preprocessing tasks complete')
         
             
@@ -319,7 +327,29 @@ class Preprocessing():
         return toks, lemmas, pos, phrases, ents
     
     
-    def get_features(self, tweets, vocab, punct):
+    def get_features(self):
+        #process troll tweets
+        with gzip.open(self.config.troll_tweet_tagged_path, 'rb') as fz:
+            troll_tweets = pickle.load(fz)
+
+        troll_feats = self.calculate_features(troll_tweets)
+
+        print('storing troll features')
+        with gzip.open(self.config.troll_feature_path, 'wb') as oz:
+            pickle.dump(troll_feats, oz)
+
+        #process user tweets
+        with gzip.open(self.config.user_tweet_tagged_path, 'rb') as fz:
+            user_tweets = pickle.load(fz)
+
+        user_feats = self.calculate_features(user_tweets)
+
+        print('storing user features')
+        with gzip.open(self.config.user_feature_path, 'wb') as oz:
+            pickle.dump(user_feats, oz)
+
+        
+    def calculate_features(self, tweets):
         feats = []
         for i,tweet in enumerate(tweets):
             if i and i%100000==0:

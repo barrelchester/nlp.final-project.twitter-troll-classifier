@@ -21,4 +21,11 @@ class Config():
         self.troll_tweet_tagged_path = '%s/troll_tweets_tagged.pkl.gz' % self.data_path
         self.user_tweet_tagged_path = '%s/user_tweets_tagged.pkl.gz' % self.data_path
         
+        #tweet features
+        self.troll_features_path = '%s/troll_features.pkl.gz' % self.data_path
+        self.user_features_path = '%s/user_features.pkl.gz' % self.data_path
+        
+        #data subset
+        self.feature_x_path = '%s/1000000_features_x.pkl.gz' % self.data_path
+        self.feature_y_path = '%s/1000000_features_y.pkl' % self.data_path
         
