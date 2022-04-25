@@ -37,6 +37,11 @@ class Preprocessing():
         options:
         use_link_user_emoji_tags - option to replace link/user/emoji with tags <LINK> etc.
         '''
+        #if the end result files are already there, just return
+        if os.path.exists(self.troll_features_path):
+            print('All preprocessing tasks already complete')
+            return
+        
         #first extract the tweet type and text from the raw files and store in compressed single files
         if not os.path.exists(self.config.troll_tweet_texts_path):
             print('%s not found, extracting tweets...' % self.config.troll_tweet_texts_path)
