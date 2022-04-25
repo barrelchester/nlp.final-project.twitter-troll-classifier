@@ -27,5 +27,5 @@ class Config():
         
         #data subset
         self.feature_x_path = '%s/1000000_features_x.pkl.gz' % self.data_path
-        self.feature_y_path = '%s/1000000_features_y.pkl' % self.data_path
+        self.feature_y_path = '%s/1000000_features_y.pkl.gz' % self.data_path
         
